@@ -7,8 +7,6 @@ use PhpParser\Node;
 
 class Visitor extends PhpParser\NodeVisitorAbstract
 {
-    private $isActive = false;
-
     /** @var TypeScript/Interface_[] */
     private $output = [];
 
@@ -21,29 +19,17 @@ class Visitor extends PhpParser\NodeVisitorAbstract
 
             /** @var PhpParser\Node\Stmt\Class_ $class */
             $class = $node;
-
-            if ($class->getDocComment()) {
-                $this->isActive = true;
-                $this->output[] = $this->currentInterface = new ParserInterface($class->name);
-            }
+            $this->output[] = $this->currentInterface = new ParserInterface($class->name);
         }
 
-        if ($this->isActive) {
-            if ($node instanceof PhpParser\Node\Stmt\Property) {
-                /** @var PhpParser\Node\Stmt\Property $property */
-                $property = $node;
+        if ($node instanceof PhpParser\Node\Stmt\Property) {
+            /** @var PhpParser\Node\Stmt\Property $property */
+            $property = $node;
 
-                $this->currentInterface->properties[] = $this->parsePhpDocForProperty($property->getDocComment(), $property->props[0]->name);
-            }
+            $this->currentInterface->properties[] = $this->parsePhpDocForProperty($property->getDocComment(), $property->props[0]->name);
         }
     }
 
-    public function leaveNode(Node $node)
-    {
-        if ($node instanceof PhpParser\Node\Stmt\Class_) {
-            $this->isActive = false;
-        }
-    }
 
     /**
      * @param \PhpParser\Comment|null $phpDoc
@@ -56,10 +42,20 @@ class Visitor extends PhpParser\NodeVisitorAbstract
 
         if ($phpDoc !== null) {
             if (preg_match('/@var[ \t]+([a-z0-9\[\]\|]+)/i', $phpDoc->getText(), $matches)) {
-                $phpDocType = strtolower(trim($matches[1]));
+                $phpDocType = trim($matches[1]);
 
-                $isArray = $this->isArrayType($phpDocType);
-                $isNullable = $this->isNullable($phpDocType);
+                $types = explode('|', $phpDocType);
+
+                if ($this->isNullable($types)) {
+                    $isNullable = true;
+                    $phpDocType = $this->nullableType($types);
+                }
+
+                // If the property is an array of type (int[])
+                if ($this->isArrayType($phpDocType)) {
+                    $isArray = true;
+                    $phpDocType = $this->arrayType($phpDocType);
+                }
 
                 switch ($phpDocType) {
                     case 'int': // no break
@@ -77,6 +73,12 @@ class Visitor extends PhpParser\NodeVisitorAbstract
                     case 'array':
                         $type = 'any';
                         $isArray = true;
+                        break;
+                    case 'mixed':
+                        $type = 'any';
+                        break;
+                    default:
+                        $type = $phpDocType;
                         break;
                 }
             }
@@ -103,17 +105,42 @@ class Visitor extends PhpParser\NodeVisitorAbstract
     }
 
     /**
-     * Return true if the property can be nullable (example: int|null).
+     * Return the type of an array of type (example: for "int[]" it will return "int").
      * @param string $type
+     * @return string
+     */
+    private function arrayType(string $type): string
+    {
+        return str_replace('[]', '', $type);
+    }
+
+    /**
+     * Return true if the property can be nullable (example: int|null).
+     * @param array $types
      * @return bool
      */
-    private function isNullable(string $type): bool
+    private function isNullable(array $types): bool
     {
-        $types = explode('|', $type);
         if (\in_array('null', $types)) {
             return true;
         }
 
         return false;
+    }
+
+    /**
+     * Return true if the property can be nullable (example: int|null).
+     * @param array $types
+     * @return string|null
+     */
+    private function nullableType(array $types)
+    {
+        foreach ($types as $type) {
+            // We return the first type which is not null
+            if ($type !== 'null') {
+                return $type;
+            }
+        }
+        return null;
     }
 }
