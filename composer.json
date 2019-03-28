@@ -1,5 +1,5 @@
 {
-    "name": "janit/typescript-generator-bundle",
+    "name": "nicoboos/typescript-generator-bundle",
     "description": "A Symfony Bundle that provides a command to generate TypeScript interfaces from PHP classes",
     "type": "symfony-bundle",
     "autoload": {
@@ -8,8 +8,7 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Jani Tarvainen",
-            "email": "janit@iki.fi"
+            "name": "Nicolas Boos"
         }
     ],
     "require": {
