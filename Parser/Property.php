@@ -23,16 +23,8 @@ class Property
 
     public function __toString()
     {
-        $type = $this->type;
-        if ($this->isArray) {
-            $type = "Array<$type>";
-        }
-
-        $operator = ':';
-
-        if ($this->isNullable) {
-            $operator = '?:';
-        }
+        $type = $this->isArray ? "Array<{$this->type}>" : $this->type;
+        $operator = $this->isNullable ? '?:' : ':';
 
         return "{$this->name}$operator $type";
     }
