@@ -33,8 +33,7 @@ class Visitor extends PhpParser\NodeVisitorAbstract
                 /** @var PhpParser\Node\Stmt\Property $property */
                 $property = $node;
 
-                $type = $this->parsePhpDocForProperty($property->getDocComment());
-                $this->currentInterface->properties[] = new Property($property->props[0]->name, $type);
+                $this->currentInterface->properties[] = $this->parsePhpDocForProperty($property->getDocComment(), $property->props[0]->name);
             }
         }
     }
@@ -49,23 +48,41 @@ class Visitor extends PhpParser\NodeVisitorAbstract
     /**
      * @param \PhpParser\Comment|null $phpDoc
      */
-    private function parsePhpDocForProperty($phpDoc)
+    private function parsePhpDocForProperty($phpDoc, string $name)
     {
-        $result = "any";
+        $type = 'any';
+        $isArray = false;
+        $isNullable = false;
 
         if ($phpDoc !== null) {
-            if (preg_match('/@var[ \t]+([a-z0-9]+)/i', $phpDoc->getText(), $matches)) {
-                $t = trim(strtolower($matches[1]));
+            if (preg_match('/@var[ \t]+([a-z0-9\[\]\|]+)/i', $phpDoc->getText(), $matches)) {
+                $phpDocType = strtolower(trim($matches[1]));
 
-                if ($t === "int") {
-                    $result = "number";
-                } elseif ($t === "string") {
-                    $result = "string";
+                $isArray = $this->isArrayType($phpDocType);
+                $isNullable = $this->isNullable($phpDocType);
+
+                switch ($phpDocType) {
+                    case 'int': // no break
+                    case 'integer': // no break
+                    case 'float':
+                        $type = 'number';
+                        break;
+                    case 'string':
+                        $type = 'string';
+                        break;
+                    case 'bool': // no break
+                    case 'boolean':
+                        $type = 'boolean';
+                        break;
+                    case 'array':
+                        $type = 'any';
+                        $isArray = true;
+                        break;
                 }
             }
         }
 
-        return $result;
+        return new Property($name, $type, $isNullable, $isArray);
     }
 
     public function getOutput()
@@ -73,5 +90,30 @@ class Visitor extends PhpParser\NodeVisitorAbstract
         return implode("\n\n", array_map(function ($i) {
             return (string)$i;
         }, $this->output));
+    }
+
+    /**
+     * Return true if the property is an array of a specific type (example: int[]).
+     * @param string $type
+     * @return bool
+     */
+    private function isArrayType(string $type): bool
+    {
+        return strpos($type, '[]') !== false;
+    }
+
+    /**
+     * Return true if the property can be nullable (example: int|null).
+     * @param string $type
+     * @return bool
+     */
+    private function isNullable(string $type): bool
+    {
+        $types = explode('|', $type);
+        if (\in_array('null', $types)) {
+            return true;
+        }
+
+        return false;
     }
 }
