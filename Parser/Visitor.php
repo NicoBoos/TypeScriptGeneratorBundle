@@ -21,8 +21,8 @@ class Visitor extends PhpParser\NodeVisitorAbstract
 
             /** @var PhpParser\Node\Stmt\Class_ $class */
             $class = $node;
-            // If there is "@TypeScriptMe" in the class phpDoc, then ...
-            if ($class->getDocComment() && strpos($class->getDocComment()->getText(), "@TypeScriptMe") !== false) {
+
+            if ($class->getDocComment()) {
                 $this->isActive = true;
                 $this->output[] = $this->currentInterface = new ParserInterface($class->name);
             }
@@ -33,10 +33,8 @@ class Visitor extends PhpParser\NodeVisitorAbstract
                 /** @var PhpParser\Node\Stmt\Property $property */
                 $property = $node;
 
-                if ($property->isPublic()) {
-                    $type = $this->parsePhpDocForProperty($property->getDocComment());
-                    $this->currentInterface->properties[] = new Property($property->props[0]->name, $type);
-                }
+                $type = $this->parsePhpDocForProperty($property->getDocComment());
+                $this->currentInterface->properties[] = new Property($property->props[0]->name, $type);
             }
         }
     }
@@ -61,8 +59,7 @@ class Visitor extends PhpParser\NodeVisitorAbstract
 
                 if ($t === "int") {
                     $result = "number";
-                }
-                elseif ($t === "string") {
+                } elseif ($t === "string") {
                     $result = "string";
                 }
             }
@@ -73,6 +70,8 @@ class Visitor extends PhpParser\NodeVisitorAbstract
 
     public function getOutput()
     {
-        return implode("\n\n", array_map(function ($i) { return (string)$i;}, $this->output));
+        return implode("\n\n", array_map(function ($i) {
+            return (string)$i;
+        }, $this->output));
     }
 }
