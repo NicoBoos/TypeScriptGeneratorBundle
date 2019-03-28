@@ -29,8 +29,7 @@ class GenerateCommand extends ContainerAwareCommand
                 'toDir',
                 InputArgument::OPTIONAL,
                 'Where to export generated classes'
-            )
-        ;
+            );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -40,7 +39,7 @@ class GenerateCommand extends ContainerAwareCommand
         $fromDir = $input->getArgument('fromDir');
         $toDir = $input->getArgument('toDir');
 
-        if(!$toDir){
+        if (!$toDir) {
             $toDir = 'typescript';
 
         }
@@ -50,27 +49,25 @@ class GenerateCommand extends ContainerAwareCommand
 
         $fs = new Filesystem();
         $finder = new Finder();
-        $finder->files('*.php')->in( $projectDir . '/' . $fromDir);
+        $finder->files('*.php')->in($projectDir . '/' . $fromDir);
 
         foreach ($finder as $file) {
-
             $visitor = new Visitor();
             $traverser->addVisitor($visitor);
             $code = $file->getContents();
 
             try {
-
                 $stmts = $parser->parse($code);
                 $stmts = $traverser->traverse($stmts);
 
-                if($visitor->getOutput()){
-                    $targetFile = $toDir . '/' . str_replace( '.php','.d.ts', $file->getFilename());
-                    $fs->dumpFile($targetFile,$visitor->getOutput());
+                if ($visitor->getOutput()) {
+                    $targetFile = $toDir . '/' . str_replace('.php', '.d.ts', $file->getFilename());
+                    $fs->dumpFile($targetFile, $visitor->getOutput());
                     $output->writeln('created interface ' . $targetFile);
                 }
 
             } catch (\ParseError $e) {
-                $output->writeln('Parse error: ' .$e->getMessage());
+                $output->writeln('Parse error: ' . $e->getMessage());
             }
 
         }
