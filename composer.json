@@ -1,5 +1,5 @@
 {
-    "name": "nicoboos/typescript-generator-bundle",
+    "name": "janit/typescript-generator-bundle",
     "description": "A Symfony Bundle that provides a command to generate TypeScript interfaces from PHP classes",
     "type": "symfony-bundle",
     "autoload": {
